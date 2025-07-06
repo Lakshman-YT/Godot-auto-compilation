@@ -46,7 +46,7 @@ Trigger this workflow using the **"Run workflow"** button under
 
 📹 I made a full tutorial video explaining how this workflow works and how to customize it!
 
-👉 [Watch Now on YouTube](https://youtube.com/)
+👉 [Watch Now on YouTube](https://youtu.be/wZsAY_SdEb8)
 
 ---
 
