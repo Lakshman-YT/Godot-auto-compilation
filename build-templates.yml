@@ -8,31 +8,40 @@ on:
 jobs:
   build_templates:
     runs-on: ubuntu-latest
+
     env:
       SCONSFLAGS: verbose=yes warnings=all use_lto=yes
       SCRIPT_AES256_ENCRYPTION_KEY: ${{ secrets.SCRIPT_AES256_ENCRYPTION_KEY }}
 
     steps:
-      - name: Checkout current repo
+
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Clone latest stable Godot source into ./godot
-        run: |
-          curl -s https://api.github.com/repos/godotengine/godot/releases/latest \
-            | grep "tag_name" | cut -d '"' -f4 | xargs -I {} git clone --depth 1 --branch {} https://github.com/godotengine/godot.git godot
 
-      - name: Download AES-256 secure script
+      - name: Clone latest Godot source
         run: |
-          curl -L -o aes_secure.py "https://raw.githubusercontent.com/KnifeXRage/Godot-Secure/main/Godot%20Secure%20AES-256.py"
+          TAG=$(curl -s https://api.github.com/repos/godotengine/godot/releases/latest | grep tag_name | cut -d '"' -f4)
+          echo "Latest Godot version: $TAG"
+          git clone --depth 1 --branch $TAG https://github.com/godotengine/godot.git godot
 
-      - name: Patch AES script for non-interactive use
-        run: |
-          sed -i 's/confirm = input(.*/confirm = "yes"/' aes_secure.py
-          sed -i '/exit(/d' aes_secure.py
 
-      - name: Run AES-256 secure script (non-interactive)
+      - name: Clone Godot Secure
         run: |
-          python3 aes_secure.py ./godot || true
+          git clone https://github.com/KnifeXRage/Godot-Secure.git
+
+
+      - name: Detect encryption script
+        run: |
+          SCRIPT=$(find Godot-Secure -type f -name "*.py" | grep "AES" | head -n 1)
+          echo "Detected script: $SCRIPT"
+          echo "SCRIPT=$SCRIPT" >> $GITHUB_ENV
+
+
+      - name: Run encryption script
+        run: |
+          export SCRIPT_AES256_ENCRYPTION_KEY=$SCRIPT_AES256_ENCRYPTION_KEY
+          printf "y\n\n" | python3 "$SCRIPT" godot || true
 
       - name: Install dependencies
         run: |
@@ -58,38 +67,47 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-godot-
 
-      - name: Build export templates (Linux)
+      - name: Build Linux export templates
         run: |
           cd godot
           scons platform=linuxbsd target=template_release tools=no
           cd ..
 
-      - name: Build export templates (Windows)
+
+      - name: Build Windows export templates
         run: |
           cd godot
-          scons platform=windows target=template_release arch=x86_64 tools=no
-          scons platform=windows target=editor arch=x86_64 tools=yes
+          scons platform=windows target=template_release arch=x86_64 tools=no d3d12=no
+          scons platform=windows target=editor arch=x86_64 tools=yes d3d12=no
           cd ..
 
-      - name: Package Linux build
+
+      - name: Package Linux templates
         run: |
-          mkdir -p templates_linux
+          mkdir templates_linux
           cp godot/bin/*linuxbsd* templates_linux/
-          (cd templates_linux && zip -9 -r ../export_templates_linux.zip .)
+          cd templates_linux
+          zip -9 -r ../export_templates_linux.zip .
+          cd ..
 
-      - name: Package Windows build
+
+      - name: Package Windows templates
         run: |
-          mkdir -p templates_windows
+          mkdir templates_windows
           cp godot/bin/*windows* templates_windows/
-          (cd templates_windows && zip -9 -r ../export_templates_windows.zip .)
+          cd templates_windows
+          zip -9 -r ../export_templates_windows.zip .
+          cd ..
 
-      - name: Upload Linux artifact
+
+      - name: Upload Linux templates
         uses: actions/upload-artifact@v4
         with:
           name: linux-templates
           path: export_templates_linux.zip
 
-      - name: Upload Windows artifact
+
+      - name: Upload Windows templates
         uses: actions/upload-artifact@v4
         with:
           name: windows-templates
