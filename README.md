@@ -1,3 +1,4 @@
+Note: the script is updated for godot version 4.6.x on 24-3-2026, Hence the explanation in youtube video and script code may vary slightly due to newer updates.
 # 🚀 Godot Export Templates Builder (AES-256 Secured) 🔐
 
 This GitHub Actions workflow automatically builds **Linux** and **Windows export templates** from the **latest stable version of Godot Engine**, with added security using an **AES-256 script** for protecting your game scripts.
